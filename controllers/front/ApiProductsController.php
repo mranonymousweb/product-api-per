@@ -6,10 +6,14 @@ class ApiProductsController extends ModuleFrontController
     {
         parent::initContent();
 
-        // حذف اعتبارسنجی کلید API
-        // $this->validateApiKey(); // حذف یا غیرفعال کردن این خط
+        // بررسی روش درخواست (POST)
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('HTTP/1.1 405 Method Not Allowed');
+            echo json_encode(['error' => 'Method not allowed. Please use POST.']);
+            die();
+        }
 
-        // دریافت ورودی‌ها
+        // دریافت ورودی‌ها از POST
         $page_unique = Tools::getValue('page_unique');
         $page_url = Tools::getValue('page_url');
         $page = (int)Tools::getValue('page', 1); // پیش‌فرض: ۱
@@ -28,13 +32,29 @@ class ApiProductsController extends ModuleFrontController
     {
         $products = []; // لیست محصولات
 
-        // اینجا می‌توانید کد مربوط به دریافت لیست محصولات از دیتابیس را اضافه کنید
-        $products = Product::getProducts($this->context->language->id, ($page - 1) * 100, 100, 'id_product', 'ASC');
+        // دریافت لیست محصولات از دیتابیس با تعداد محدود برای هر صفحه
+        $products = Product::getProducts(
+            $this->context->language->id, 
+            ($page - 1) * 100, 
+            100, 
+            'id_product', 
+            'ASC'
+        );
+
+        // دریافت تعداد کل محصولات برای محاسبه حداکثر صفحات
+        $totalProducts = Product::getProducts(
+            $this->context->language->id, 
+            0, 
+            null, 
+            'id_product', 
+            'ASC'
+        );
+        $maxPages = ceil(count($totalProducts) / 100);
 
         // ایجاد خروجی
         $response = [
             'count' => count($products),
-            'max_pages' => ceil(Product::getProducts($this->context->language->id, 0, null, 'id_product', 'ASC') / 100), // حداکثر صفحات
+            'max_pages' => $maxPages,
             'products' => $products,
         ];
 
@@ -45,18 +65,17 @@ class ApiProductsController extends ModuleFrontController
 
     private function getProductDetails($page_unique, $page_url)
     {
-        $product = []; // اینجا می‌توانید کد مربوط به دریافت اطلاعات محصول خاص را اضافه کنید
+        $product = null; // برای ذخیره اطلاعات محصول
 
         // جستجوی محصول با شناسه یا URL
         if (!empty($page_unique)) {
             $product = new Product($page_unique);
         } elseif (!empty($page_url)) {
-            // جستجوی محصول با URL
-            $product = Product::getProductByLink($page_url); // فرض بر این است که این تابع وجود دارد
+            $product = $this->getProductByUrl($page_url);
         }
 
         // ایجاد خروجی
-        if ($product) {
+        if ($product && $product->id) {
             $response = [
                 'products' => [$this->formatProduct($product)],
             ];
@@ -81,8 +100,8 @@ class ApiProductsController extends ModuleFrontController
             'old_price' => $product->wholesale_price,
             'availability' => $product->available_now ? 'instock' : 'outofstock',
             'category_name' => implode(', ', $product->getCategories()),
-            'image_link' => $product->getCover()['url'],
-            'image_links' => $product->getImages($this->context->language->id),
+            'image_link' => $this->getProductCoverImage($product),
+            'image_links' => $this->getProductImages($product),
             'page_url' => $product->getLink(),
             'short_desc' => $product->description_short,
             'spec' => $this->getProductSpecs($product),
@@ -93,7 +112,7 @@ class ApiProductsController extends ModuleFrontController
 
     private function getProductSpecs($product)
     {
-        // اینجا می‌توانید ویژگی‌های محصول را دریافت کنید
+        // ویژگی‌های محصول را دریافت کنید
         return [
             'memory' => $product->memory ?? 'N/A',
             'camera' => $product->camera ?? 'N/A',
@@ -101,14 +120,34 @@ class ApiProductsController extends ModuleFrontController
         ];
     }
 
-    // حذف اعتبارسنجی API Key
-    // private function validateApiKey()
-    // {
-    //     $apiKey = Tools::getValue('api_key');
-    //     if ($apiKey !== 'YOUR_SECRET_API_KEY') {
-    //         header('HTTP/1.0 403 Forbidden');
-    //         echo json_encode(['error' => 'Unauthorized']);
-    //         die();
-    //     }
-    // }
+    private function getProductCoverImage($product)
+    {
+        $cover = Product::getCover($product->id);
+        if ($cover) {
+            return $this->context->link->getImageLink($product->link_rewrite, $cover['id_image']);
+        }
+        return null;
+    }
+
+    private function getProductImages($product)
+    {
+        $images = [];
+        $productImages = $product->getImages($this->context->language->id);
+        foreach ($productImages as $image) {
+            $images[] = $this->context->link->getImageLink($product->link_rewrite, $image['id_image']);
+        }
+        return $images;
+    }
+
+    private function getProductByUrl($page_url)
+    {
+        // اینجا باید با استفاده از query به جستجوی محصول با لینک `page_url` بپردازید.
+        $sql = 'SELECT id_product FROM ' . _DB_PREFIX_ . 'product_lang WHERE link_rewrite = "' . pSQL($page_url) . '"';
+        $productId = Db::getInstance()->getValue($sql);
+
+        if ($productId) {
+            return new Product($productId);
+        }
+        return null;
+    }
 }
