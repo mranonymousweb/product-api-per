@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<module>
+    <name>productapi</name>
+    <displayName>Product API</displayName>
+    <version>1.0.0</version>
+    <author>Your Name</author>
+    <description>Provides an API for products in JSON format.</description>
+    <tab>front_office_features</tab>
+</module>
