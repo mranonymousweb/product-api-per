@@ -14,4 +14,50 @@
 2. پلاگین را از طریق مدیریت پرستاشاپ فعال کنید.
 3. برای دریافت خروجی محصولات به URL زیر مراجعه کنید:
 
-# product-api-per
+# product-api   https://ponisha.ir/profile/mranonymousweb
+
+
+## پارامترهای ورودی API
+این API می‌تواند به شما امکان مشاهده محصولات را به صورت کلی یا بر اساس شناسه و لینک محصول بدهد.
+
+### پارامترهای ورودی:
+- `page`: شماره صفحه (در صورتی که ارسال نشود، مقدار پیش‌فرض 1 خواهد بود).
+- `page_unique`: شناسه محصول.
+- `page_url`: لینک محصول.
+
+### پارامترهای اجباری:
+- `page_unique` یا `page_url` برای نمایش محصول خاص.
+
+## قالب خروجی JSON 
+خروجی این API به صورت یک لیست از محصولات ارائه می‌شود. قالب کلی خروجی به شکل زیر است:
+
+```json
+{
+    "count": 150,
+    "max_pages": 2,
+    "products": [
+        {
+            "title": "Xiaomi Mi Note 10 Pro",
+            "subtitle": "Note 10 Pro",
+            "page_unique": "12412",
+            "current_price": "5000000",
+            "old_price": "5500000",
+            "availability": "instock",
+            "category_name": "mobile",
+            "image_link": "https://yourdomain.com/images/test.jpg",
+            "image_links": [
+                "https://yourdomain.com/images/test.jpg",
+                "https://yourdomain.com/images/test-2.jpg"
+            ],
+            "page_url": "https://yourdomain.com/product/34",
+            "short_desc": "توضیحات مختصر در مورد محصول",
+            "specs": {
+                "memory": "4GB",
+                "camera": "12MP"
+            },
+            "registry": "رجیستر شده",
+            "guarantee": "گارانتی 18 ماهه"
+        }
+    ]
+}
+
